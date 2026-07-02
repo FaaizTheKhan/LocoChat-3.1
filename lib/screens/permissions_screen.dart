@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'home_screen.dart';
 
-class WelcomeScreen extends StatefulWidget {
-  const WelcomeScreen({super.key});
+class PermissionsScreen extends StatefulWidget {
+  final VoidCallback onPermissionsGranted;
+
+  const PermissionsScreen({super.key, required this.onPermissionsGranted});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  State<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> {
+class _PermissionsScreenState extends State<PermissionsScreen> {
   bool _isRequesting = false;
 
   Future<void> _requestPermissionsAndStart() async {
@@ -30,13 +31,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     // Check if the most critical permissions were granted
     if (statuses[Permission.bluetooth]!.isGranted && statuses[Permission.location]!.isGranted) {
-      // Navigate to the Radar Screen
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
-      }
+      // Notify parent
+      widget.onPermissionsGranted();
     } else {
       // Show an error if they denied the permissions
       if (mounted) {
