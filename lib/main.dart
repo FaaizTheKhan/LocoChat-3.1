@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/chat_state.dart';
-import 'screens/welcome_screen.dart';
+import 'providers/locochat_provider.dart';
+import 'screens/locochat_screen.dart';
 
 void main() {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ChatState()),
+        ChangeNotifierProvider(create: (_) => LocoChatProvider()),
       ],
       child: const LocoChatApp(),
     ),
@@ -32,7 +32,7 @@ class LocoChatApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const WelcomeScreen(),
+      home: const LocoChatScreen(),
     );
   }
 }

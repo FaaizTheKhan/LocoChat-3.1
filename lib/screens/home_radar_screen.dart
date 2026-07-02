@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/chat_state.dart';
-import '../services/discovery_service.dart';
+import '../providers/locochat_provider.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeRadarScreen extends StatefulWidget {
+  final Function(String) onStartAudioCall;
+  final Function(String) onStartVideoCall;
+  final Function(String) onOpenChat;
+
+  const HomeRadarScreen({
+    super.key,
+    required this.onStartAudioCall,
+    required this.onStartVideoCall,
+    required this.onOpenChat,
+  });
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeRadarScreen> createState() => _HomeRadarScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeRadarScreenState extends State<HomeRadarScreen> with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
-  final DiscoveryService _discoveryService = DiscoveryService();
 
   @override
   void initState() {
     super.initState();
 
-    // Setup the Radar Pulse Animation
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -28,27 +34,19 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
     );
-
-    // Give the UI a frame to build, then start the hardware antenna
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = Provider.of<ChatState>(context, listen: false);
-      _discoveryService.startMeshNode(state);
-    });
   }
 
   @override
   void dispose() {
     _pulseController.dispose();
-    _discoveryService.stopMeshNode();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to the ChatState reactive provider
-    final chatState = Provider.of<ChatState>(context);
-    final myId = chatState.localIdentity ?? "Generating...";
-    final peers = chatState.discoveredPeers;
+    final state = Provider.of<LocoChatProvider>(context);
+    final myId = state.localIdentity ?? "Generating...";
+    final peers = state.discoveredPeers;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       ),
       body: Column(
         children: [
-          // The Radar UI
+          // Radar UI
           Container(
             height: 250,
             width: double.infinity,
@@ -105,8 +103,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             ),
           ),
 
-          // The Reactive List of Discovered Devices
+          // Reactive List of Discovered Devices
           Expanded(
+            flex: 2,
             child: peers.isEmpty
                 ? Center(
                     child: Text("Scanning for nearby devices...", style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
@@ -131,16 +130,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                icon: const Icon(Icons.message, color: Color(0xFF818CF8)),
+                                onPressed: () => widget.onOpenChat(peerId),
+                              ),
+                              IconButton(
                                 icon: const Icon(Icons.call, color: Colors.greenAccent),
-                                onPressed: () {
-                                  // Trigger Audio Call logic here
-                                },
+                                onPressed: () => widget.onStartAudioCall(peerId),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.videocam, color: Color(0xFF38BDF8)),
-                                onPressed: () {
-                                  // Trigger Video Call logic here
-                                },
+                                onPressed: () => widget.onStartVideoCall(peerId),
                               ),
                             ],
                           ),
@@ -149,6 +148,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     },
                   ),
           ),
+
+          // Local Diagnostic Terminal
+          Expanded(
+            flex: 1,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Colors.black54,
+                border: Border(top: BorderSide(color: Color(0xFF1E293B), width: 2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text("Terminal Logs", style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Builder(
+                      builder: (context) {
+                        final logs = state.telemetryLogs.reversed.toList();
+                        return ListView.builder(
+                          reverse: true,
+                          itemCount: logs.length,
+                          itemBuilder: (context, index) {
+                             return Text("> ${logs[index]}", style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontFamily: 'monospace'));
+                          },
+                        );
+                      }
+                    ),
+                  )
+                ],
+              ),
+            ),
+          )
         ],
       ),
     );
